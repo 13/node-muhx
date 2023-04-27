@@ -14,6 +14,21 @@ const serverPort = 3000;
 var connectCounter = 0;
 
 const socketWol = socketServer.of("/wol");
+const socketPortal = socketServer.of("/portal");
+
+const menus = {
+  menu: [
+    { icon: "mdi-view-dashboard", text: "Dashboard", href: "/" },
+    { icon: "mdi-lock", text: "Portal", href: "portal" },
+    { icon: "mdi-lan", text: "WOL", href: "wol" },
+  ],
+};
+
+const portals = {
+  portals: [
+    // { id: "1", name: "HD", state: 1}
+  ],
+};
 
 // Define the hosts object
 const hosts = {
@@ -36,6 +51,46 @@ function getTime() {
   return showTimestamp ? dayjs().format("HH:mm:ss.SSS ") : "";
 }
 
+// portal
+socketPortal.on("connection", async (socket) => {
+  console.log(getTime() + "socketio: portal connected");
+  connectCounter++;
+  console.log(getTime() + "socketio: users connected " + connectCounter);
+
+  // disconnect user
+  socket.on("disconnect", () => {
+    connectCounter--;
+    console.log(getTime() + "socketio: users disconnected " + connectCounter);
+    clearAsyncInterval(interval_p);
+  });
+
+  // receive portal command
+  socket.on("pushportal", (name, action) => {
+    console.log(getTime() + "socketio: pushportal " + name + " " + action);
+  });
+
+  // Send JSON
+  //console.log(getTime() + 'portal: Sending portal JSON ' + JSON.stringify(Object.assign({}, menu, portals)))
+  //portal.emit('portal',(Object.assign({}, menu, portals)))
+  console.log(
+    getTime() +
+      "portal: Sending portal JSON " +
+      JSON.stringify(Object.assign({}, portals))
+  );
+  socketPortal.emit("portal", Object.assign({}, menus, portals));
+
+  // hosts interval ping and send
+  var interval_p = setAsyncInterval(async () => {
+    const promise = new Promise((resolve) => {
+      setTimeout(resolve("all done"), 3000);
+    });
+    await promise;
+    //console.log(getTime() + 'portal: Sending portal JSON interval ' + JSON.stringify(Object.assign({}, menu, portals)))
+    socketPortal.emit("portal", Object.assign({}, menus, portals));
+  }, 3000);
+});
+
+// wol
 socketWol.on("connection", async (socket) => {
   console.log(getTime() + "socketio: wol connected");
   connectCounter++;
@@ -68,13 +123,13 @@ socketWol.on("connection", async (socket) => {
   console.log(
     getTime() +
       "portal: Sending wol JSON " +
-      JSON.stringify(Object.assign({}, hosts))
+      JSON.stringify(Object.assign({}, menus, hosts))
   );
-  socketWol.emit("wol", Object.assign({}, hosts));
+  socketWol.emit("wol", Object.assign({}, menus, hosts));
 
   // hosts interval ping and send
   var interval = setAsyncInterval(async () => {
-     {
+    {
       let x;
       for (y in hosts[x]) {
         if (hosts[x][y].hasOwnProperty("ip")) {
@@ -93,7 +148,7 @@ socketWol.on("connection", async (socket) => {
     });
     await promise;
     //console.log(getTime() + 'portal: Sending wol JSON interval ' + JSON.stringify(Object.assign({}, menu, hosts)))
-    socketWol.emit("wol", Object.assign({}, hosts));
+    socketWol.emit("wol", Object.assign({}, menus, hosts));
   }, 3000);
 });
 
@@ -104,11 +159,15 @@ socketServer.on("connection", async (socket) => {
   console.log(getTime() + "socketio: new connection " + clientIp);
 });
 
-app.get("/ping", (req, res) => {
-  res.send("pong");
+app.get("/", (req, res) => {
+  res.sendFile(path.join(path.resolve(), "/public/portal.html"));
 });
 
-app.get("/", (req, res) => {
+app.get("/portal", (req, res) => {
+  res.sendFile(path.join(path.resolve(), "/public/portal.html"));
+});
+
+app.get("/wol", (req, res) => {
   res.sendFile(path.join(path.resolve(), "/public/wol.html"));
 });
 

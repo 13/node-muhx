@@ -19,6 +19,7 @@
   "dependencies": {
     "dayjs": "^1.11.7",
     "is-reachable": "^5.2.1",
+    "mqtt": "^4.3.7",
     "socketio": "^1.0.0",
     "wake_on_lan": "^1.0.0"
   }
