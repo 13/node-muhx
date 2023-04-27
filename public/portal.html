@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Portal</title>
+    <link rel="icon" href="favicon.png" type="image/png" sizes="16x16"> 
+    <!-- vuetify -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <!--
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    -->
+    <link href="/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="/css/vuetify.min.css" rel="stylesheet">
+    <!-- include socket.io client side script -->
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+<body>
+		<div id="app">
+			<v-app>
+				<v-navigation-drawer
+				v-model="drawer"
+				:clipped="$vuetify.breakpoint.lgAndUp"
+				app
+				>
+					<v-list dense>
+						<template v-for="item in menu">
+							<v-row
+							v-if="item.heading"
+							:key="item.heading"
+							align="center"
+							>
+								<v-col cols="6">
+									<v-subheader v-if="item.heading">
+										{{ item.heading }}
+									</v-subheader>
+								</v-col>
+								<v-col
+								cols="6"
+								class="text-center"
+								>
+									<a
+									href="#!"
+									class="body-2 black--text"
+									>EDIT</a>
+								</v-col>
+							</v-row>
+						<v-list-group
+						v-else-if="item.children"
+						:key="item.text"
+						v-model="item.model"
+						:prepend-icon="item.model ? item.icon : item['icon-alt']"
+						append-icon=""
+						>
+							<template v-slot:activator>
+								<v-list-item-content>
+									<v-list-item-title>
+										{{ item.text }}
+									</v-list-item-title>
+								</v-list-item-content>
+							</template>
+							<v-list-item
+							v-for="(child, i) in item.children"
+							:key="i"
+							:href="item.href"
+							link
+							>
+								<v-list-item-action v-if="child.icon">
+									<v-icon>{{ child.icon }}</v-icon>
+								</v-list-item-action>
+								<v-list-item-content>
+									<v-list-item-title>
+										{{ child.text }}
+									</v-list-item-title>
+								</v-list-item-content>
+							</v-list-item>
+						</v-list-group>
+						<v-list-item
+						v-else
+						:key="item.text"
+						link
+						:href="item.href"
+						>
+							<v-list-item-action>
+								<v-icon>{{ item.icon }}</v-icon>
+							</v-list-item-action>
+							<v-list-item-content>
+								<v-list-item-title>
+									{{ item.text }}
+								</v-list-item-title>
+							</v-list-item-content>
+						</v-list-item>
+					</template>
+				</v-list>
+			</v-navigation-drawer>			
+			<v-app-bar
+			:clipped-left="$vuetify.breakpoint.lgAndUp"
+			app
+			color="black"
+			dark
+			>
+				<v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>		
+				<v-toolbar-title
+				style="width: 300px"
+				class="ml-0 pl-4"
+				>
+					<span class="hidden-sm-and-down"></span>
+				</v-toolbar-title>
+				<v-spacer></v-spacer>
+				<v-btn icon @click="notifyVolume('toggle', 'mute', $event)">
+					<v-icon v-bind:color="stateToTagVV(volume.muted)">{{ volume.muted | icon }}</v-icon>
+					{{ volume.level }}%
+				</v-btn>
+			</v-app-bar>
+			<v-main>
+				<v-card class="mx-auto">
+					<!-- card header -->
+					<v-list-item>
+						<v-list-item-icon>
+							<v-icon>mdi-lock</v-icon>
+						</v-list-item-icon>	
+						<v-list-item-content>
+							<v-list-item-title class="headline">Portal</v-list-item-title>
+						</v-list-item-content>
+					</v-list-item>
+					
+					<!-- socket state -->
+					<v-progress-linear
+					class="mb-0"
+					value="100"
+					v-bind:color="stateToTag(socketState)"
+					></v-progress-linear>
+					
+					<!-- snackbar -->
+					<v-snackbar
+					v-model="sb_portal"
+					:timeout="sb_timeout"
+					color="green lighten-1"
+					top
+					>
+						{{ sb_text }}
+					</v-snackbar>	
+					
+					<!-- portal -->
+					<v-list>
+						<div v-for="(portal, idx) in portals" :key="idx">
+							<v-list-item
+							v-if="!portal.name.includes('lock') && portal.name !== 'bell'"
+							@click=""
+							disabled
+							>
+								<!-- portal header -->
+								<v-list-item-content v-if="!portal.name.includes('lock')">
+									<v-list-item-title class="headline">
+										{{ portals[idx].name | translateName }}
+									</v-list-item-title>
+								</v-list-item-content>
+								<v-chip
+								label
+								small
+								v-if="!portal.name.includes('lock')"
+								>
+									{{ portal.tstamp | shortdate }}
+								</v-chip>
+								<v-chip
+								label
+								small
+								v-if="!portal.name.includes('lock') && portal.name !== 'garage'"
+								class="ml-2"
+								>
+									{{ portals[incrementItem(idx)].tstamp | shortdate }}
+								</v-chip>
+							</v-list-item>
+							<!-- portal footer -->
+							<v-container fluid v-if="!portal.name.includes('lock') && portal.name !== 'bell'" class="pa-0">
+								<v-row no-gutters
+								align="center"
+								justify="center">	
+									<v-col>
+										<v-list-item
+										v-if="!portal.name.includes('lock')"
+										@click.stop="setDialogState(portal.name,true)"
+										>
+											<v-list-item-icon>
+												<v-icon v-bind:color="stateToTagVV(portal.state)">mdi-checkbox-blank</v-icon>
+											</v-list-item-icon>	
+											<v-list-item-content v-if="!portal.name.includes('lock')">
+												<v-list-item-title class="headline">
+													{{ portal.state | translateDoorState }}
+												</v-list-item-title>
+											</v-list-item-content>
+										</v-list-item>
+									</v-col>
+									<v-col v-if="!portal.name.includes('lock') && portal.name !== 'garage'">
+										<v-list-item
+										v-if="!portal.name.includes('lock')"
+										@click.stop="setDialogState(portal.name,true)"
+										>
+											<v-list-item-icon>
+												<v-icon v-bind:color="stateToTagVV(portals[incrementItem(idx)].state)">mdi-checkbox-blank</v-icon>
+											</v-list-item-icon>										
+											<v-list-item-content v-if="!portal.name.includes('lock')">
+												<v-list-item-title class="headline">
+													{{ portals[incrementItem(idx)].state | translateDoorLockState }}
+												</v-list-item-title>
+											</v-list-item-content>
+										</v-list-item>
+									</v-col>
+								</v-row>
+							</v-container>
+							<!-- dialog -->
+							<v-dialog
+							v-model="$data[toUpperCaseFirstChar(portal.name) + 'Dialog']"
+							v-if="portal.name !== 'bell'"
+							max-width="480"
+							>
+								<v-card>
+									<v-card-title
+									class="headline grey lighten-2 justify-center"
+									primary-title
+									>
+										{{ portals[idx].name | translateName }}
+									</v-card-title>
+									<v-card-text>
+										<!-- IF Dialog NOT Garage -->
+										<v-container fluid v-if="portal.name !== 'garage'">
+											<v-row>
+												<v-col>
+													<v-btn block text>
+														<v-icon left v-bind:color="stateToTagVV(portal.state)">mdi-checkbox-blank</v-icon>
+														{{ portal.state | translateDoorState }}
+													</v-btn>
+												</v-col>
+												<v-col>
+													<v-btn block text>
+														<v-icon left v-bind:color="stateToTagVV(portals[incrementItem(idx)].state)">mdi-checkbox-blank</v-icon>
+														{{ portals[incrementItem(idx)].state | translateDoorLockState }}
+													</v-btn>
+												</v-col>
+											</v-row>
+											<v-row>
+												<v-col>
+													<v-btn block @click="notifyPortal(portals[idx].name, portals[idx].name_short, 'open', $event)">
+														<v-icon left dark>mdi-door-open</v-icon>
+														Öffnen
+													</v-btn>
+												</v-col>
+											</v-row>
+											<v-row>
+												<v-col>
+													<v-btn block @click="notifyPortal(portals[idx].name, portals[idx].name_short, 'unlock', $event)">
+														<v-icon left dark>mdi-lock-open-variant</v-icon>
+														Entriegeln
+													</v-btn>
+												</v-col>
+												<v-col>
+													<v-btn block @click="notifyPortal(portals[idx].name, portals[idx].name_short, 'lock', $event)">
+														<v-icon left dark>mdi-lock</v-icon>
+														Verriegeln
+													</v-btn>
+												</v-col>
+											</v-row>
+											<v-row>
+												<v-col>
+													<v-btn dark block @click="setDialogState(portal.name,false)">Abbrechen</v-btn>	
+												</v-col>
+											</v-row>
+										</v-container>
+										<!-- ELSE Dialog Garage -->
+										<v-container fluid v-else>
+											<v-row>
+												<v-col>
+													<v-btn block text>
+														<v-icon left v-bind:color="stateToTagVV(portal.state)">mdi-checkbox-blank</v-icon>
+														{{ portal.state | translateDoorState }}
+													</v-btn>
+												</v-col>
+											</v-row>
+											<v-row>
+												<v-col>
+													<v-btn block @click="notifyPortal(portals[idx].name, portals[idx].name_short, 'move', $event)">
+														<v-icon left dark>mdi-arrow-up-down-bold</v-icon>
+														Bewegen
+													</v-btn>
+												</v-col>
+											</v-row>
+											<v-row>
+												<v-col>
+													<v-btn block @click="setDialogState(portal.name,false)">Abbrechen</v-btn>	
+												</v-col>
+											</v-row>
+										</v-container>
+									</v-card-text>
+								</v-card>
+							</v-dialog>
+						</div>
+					</v-list>	
+				</v-card>
+			</v-main>
+		</v-app>
+	</div><!-- app -->
+	
+	<!--
+	<script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+	-->
+	<script src="/js/vue.js"></script>
+	<script src="/js/vuetify.js"></script>
+	<script>
+		"use strict"
+		
+		var socket = io('/portal'); //load socket.io-client and connect to the host that serves the page
+		
+		// vue.js
+		var app = new Vue({
+			el: '#app',
+			vuetify: new Vuetify(),
+			data: {
+				socketState: false,
+				isHidden: false,
+				json: null,
+				portals: [],
+				menu: [],
+				volume: [],
+				sb_portal: false,
+				sb_text: null,
+				sb_timeout: 2500,
+				HousedoorDialog: false,
+				HousedoorlockDialog: false,
+				GaragedoorDialog: false,
+				GaragedoorlockDialog: false,
+				GarageDialog: false,
+				drawer: null,
+				/*menu: [
+					{ icon: 'mdi-view-dashboard', text: 'Dashboard', href: '/' },
+					{ icon: 'mdi-lock', text: 'Portal', href: 'portal' },
+					{ icon: 'mdi-lan', text: 'WOL', href: 'wol' },
+				],*/
+		},
+		filters: {
+			space (value) {
+				return (value ? 'on' : 'off')
+			},
+			short (value) {
+				return value.substr(0, value.indexOf('.'))
+			},
+			translateDoorState (value) {
+				return (value ? 'GESCHLOSSEN' : 'OFFEN')
+			},
+			translateDoorLockState (value) {
+				return (value ? 'VERRIEGELT' : 'ENTRIEGELT')
+			},
+			shortdate (value) {
+				var date_now = new Date();
+				var date_past = new Date(value);
+				var days = date_past.getDate();
+				var months = date_past.getMonth()+1;
+				var hours = date_past.getHours();
+				var minutes = date_past.getMinutes();
+				
+				days = days < 10 ? '0'+days : days;
+				months = months < 10 ? '0'+months : months;
+				hours = hours < 10 ? '0'+hours : hours;
+				minutes = minutes < 10 ? '0'+minutes : minutes;
+				var strDate = days + '.' + months + '.';
+				var strTime = hours + ':' + minutes;
+				
+				var diff = date_now.getTime() - date_past.getTime();
+				var diff_hours = Math.floor(diff / (1000 * 60 * 60));
+				
+				return ((diff_hours > 22) ? strDate + " " + strTime : strTime);
+			},
+			translateName(value){
+				var txt;
+				switch (value) {
+					case "housedoor":
+					case "housedoorlock":
+					txt = "Haustür";
+					break;
+					case "garagedoor":
+					case "garagedoorlock":
+					txt = "Garagentür";
+					break;		  
+					case "garage":
+					txt = "Garage";
+					break;
+					case "move":
+					txt = "Bewegen";
+					break;
+					case "open":
+					txt = "Öffnen";
+					break;
+					case "lock":
+					txt = "Verriegeln";
+					break;	
+					case "unlock":
+					txt = "Entriegeln";
+					break;	
+					default:
+					txt = value;
+				}
+				return txt;
+			},
+			icon (value) {
+				return (value ? 'mdi-volume-off' : 'mdi-volume-high');
+			}
+		},
+		methods: {
+			getRealtimeData() {
+				socket.on('portal', json => { //get button status from client
+					this.json = json,
+					this.portals = json.portals;
+					this.menu = json.menu;
+					this.volume = json.volume;
+					this.socketState = true;
+                                        console.log(JSON.stringify(this.json))
+                                        //console.log(JSON.stringify(this.hosts))
+					console.log("socket connect: " + this.socketState);
+				}),
+				socket.on('disconnect', socketState => {
+					this.socketState = false
+					this.portals = []
+					/*this.portals = [
+							{ id:4,state:2,
+							  name:"housedoor", name_short:"hd", name_long:"Haustür" }
+							]*/
+					console.log('socket disconnect: ' + socketState);
+				});
+			},
+			stateToTagListBgVV(value){
+				//console.log("stateToTagListBg: " + value);
+				return (!value ? 'green lighten-4' : 'red lighten-4')
+			},
+			stateToTag(value){
+				return (value ? 'green' : 'red')
+			},
+			stateToTagVV(value){
+				return (value ? 'red' : 'green')
+			},
+			capitalizeFirstLetter(value) {
+				return value.charAt(0).toUpperCase() + value.slice(1)
+			},
+			//incrementItem: function(item) {return item + 1},
+			incrementItem: function(item) { return (item < 4 ? item + 1 : item) },
+			//incrementItem: function(item) {return item},
+			warn: function (message, event) {
+				// now we have access to the native event
+				if (event) {
+					event.preventDefault()
+				}
+				console.log("Waking " + message)
+				socket.emit("wakemac", message) //send push button status to back to server
+			},
+			cancel() {
+				this.$refs.modal.close("button");
+			},
+			isLast (index) {      
+				return this.portals.length === index + 1
+			},
+			isLastRounded (index) {      
+				return (this.isLast(index) ? 'rounded-bottom' : 'rounded-bottom-0')
+			},
+			notifyPortal: function (name, name_short, action, event) {
+				// now we have access to the native event
+				if (event) {
+					event.preventDefault()
+				}
+				console.log(name + " " + action + " ...")
+				socket.emit("pushportal", name_short.toUpperCase(), action); //send push button status to back to server
+				//this.sb_text = this.$options.filters.translateName(name) + " " + action + " ..."
+				this.sb_text = this.$options.filters.translateName(name) + " " + this.$options.filters.translateName(action) + " ..."
+				this.sb_portal = true
+			},
+			notifyVolume: function (name, action, event) {
+				// now we have access to the native event
+				if (event) {
+					event.preventDefault()
+				}
+				console.log(name + " " + action + " ...")
+				socket.emit("volume", name, action) //send push button status to back to server
+				//this.sb_text = this.$options.filters.translateName(name) + " " + action + " ..."
+				this.sb_text = "Volume: " + name + " " + action + " ..."
+				this.sb_portal = true
+			},
+			setDialogState(prop,val){
+				var modalName = prop.charAt(0).toUpperCase() + prop.slice(1) + "Dialog"
+				this[modalName] = val
+			},
+			toUpperCaseFirstChar(val){
+				//var modalName = prop.charAt(0).toUpperCase() + prop.slice(1) + "Dialog"
+				//console.log("nTMF: " + modalName)
+				//this[modalName]
+				//return modalName
+				return val.charAt(0).toUpperCase() + val.slice(1)
+			}
+		},
+		created () {
+			this.getRealtimeData()
+		},
+		/*computed: {
+			fullName: function () {
+			return this.firstName + ' ' + this.lastName
+			}	
+		}*/
+	})
+</script>
+</body>
+</html>

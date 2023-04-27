@@ -1,0 +1,100 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="de-de" lang="de-de" >
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">                                                                           
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wake On Lan</title>
+  <!-- development version, includes helpful console warnings 
+  <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>-->
+  <!-- production version, optimized for size and speed -->
+  <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.8.2/css/bulma.min.css">
+  <script defer src="https://use.fontawesome.com/releases/v5.13.0/js/all.js"></script>
+  <style type="text/css">
+	.socketstatus {
+		height: 4px !important;
+	}
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="columns">
+		<div class="column is-full">
+			<p class="socketstatus notification is-marginless is-paddingless is-radiusless" v-bind:class="stateToTag(socketState)"></p>
+		</div>
+	</div>
+	<div class="columns is-mobile" v-for="host in hosts">
+		<a href="#" class="column is-three-quarters" v-on:click="warn(host.mac, $event)">{{ host.name | short }}</a>
+		<a href="#" class="column has-text-right" v-on:click="warn(host.mac, $event); isHidden = !isHidden">
+			<span class="tag" v-bind:class="stateToTag(host.state)">{{ host.state | space }}</span>
+		</a>	
+	</div>
+	<h1 v-if="isHidden">Hide me on click event!</h1>
+  </div>
+<!-- include socket.io client side script -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
+<script>
+"use strict"
+
+var socket = io(); //load socket.io-client and connect to the host that serves the page
+
+// Vue
+var app = new Vue({
+  el: '#app',
+  data: {
+    socketState: false,
+    isHidden: false,
+    json: null,
+    hosts: []
+    },
+  mounted: function () {
+    this.$nextTick(function () {
+	// ...
+    })
+  },
+  filters: {
+    space (value) {
+      return (value ? 'on' : 'off')
+    },
+    short (value) {
+      return value.substr(0, value.indexOf('.'))
+    }
+  },
+  methods: {
+	getRealtimeData() {
+		socket.on('wol', json => { //get button status from client
+			this.json = json,
+			this.hosts = json.hosts;
+			this.socketState = true;
+			console.log("socket connect: " + this.socketState);
+		}),
+		socket.on('disconnect', socketState => {
+			this.socketState = false
+			console.log('socket disconnect: ' + socketState);
+		});
+	},
+	stateToTag(value){
+		return (value ? 'is-success' : 'is-danger')
+	},
+	warn: function (message, event) {
+		// now we have access to the native event
+		if (event) {
+			event.preventDefault()
+    	}
+		console.log(message)
+        socket.emit("wakemac", message); //send push button status to back to server
+  	}
+  },
+  created () {
+	this.getRealtimeData()
+  },
+  /*computed: {
+  }*/
+})
+
+/* TODO */
+// 
+</script>
+</html>
+</body>
+</html>

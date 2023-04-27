@@ -1,0 +1,25 @@
+{
+  "name": "node-muhx",
+  "version": "1.0.0",
+  "description": "muh unified homeautomation",
+  "main": "run.mjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/13/node-muhx.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/13/node-muhx/issues"
+  },
+  "homepage": "https://github.com/13/node-muhx#readme",
+  "dependencies": {
+    "dayjs": "^1.11.7",
+    "is-reachable": "^5.2.1",
+    "socketio": "^1.0.0",
+    "wake_on_lan": "^1.0.0"
+  }
+}
