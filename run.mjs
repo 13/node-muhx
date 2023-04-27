@@ -3,6 +3,7 @@ import http from "http";
 import io from "socket.io";
 import path from "path";
 import dayjs from "dayjs";
+import * as mqtt from 'mqtt'
 
 import isReachable from "is-reachable";
 import wakeOnLan from "wake_on_lan";
@@ -12,6 +13,8 @@ const webServer = http.createServer(app);
 const socketServer = io(webServer);
 const serverPort = 3000;
 var connectCounter = 0;
+
+const mqttClient = mqtt.connect('mqtt://192.168.22.5')
 
 const socketWol = socketServer.of("/wol");
 const socketPortal = socketServer.of("/portal");
@@ -26,7 +29,7 @@ const menus = {
 
 const portals = {
   portals: [
-    // { id: "1", name: "HD", state: 1}
+    { id: "1", name: "HD", state: 1, tstamp: "1682600411"}
   ],
 };
 
@@ -50,6 +53,26 @@ app.use(express.static(path.join(path.resolve(), "/public")));
 function getTime() {
   return showTimestamp ? dayjs().format("HH:mm:ss.SSS ") : "";
 }
+
+mqttClient.on('connect', function() {
+  mqttClient.subscribe('tasmota/sensors/#', function (err) {
+    console.log('Connected to sensors')
+    //console.log(showTimestamp() + '' + scene.name + ': MQTT ' + light1.name + ' ' + light1.subscr + ' connected')
+  })
+})
+
+mqttClient.on('message', function (topic, payload) {
+  console.log('Topic: ' + topic.toString())
+  console.log('Payload: ' + payload.toString())
+  //console.log(JSON.parse(payload).N)
+  let jsonObj = '';
+  try {
+    jsonObj = JSON.parse(payload);
+    console.log('Payload JSON: ' + JSON.parse(payload));
+  } catch (error) {
+    console.log('Payload not JSON');
+  }
+})
 
 // portal
 socketPortal.on("connection", async (socket) => {
