@@ -8,45 +8,19 @@ import * as mqtt from 'mqtt'
 import isReachable from "is-reachable";
 import wakeOnLan from "wake_on_lan";
 
+import { serverPort, mqttServer, menus, portals, hosts } from './env.mjs'
+
+const showTimestamp = true;
+
 const app = express();
 const webServer = http.createServer(app);
 const socketServer = io(webServer);
-const serverPort = 3000;
 var connectCounter = 0;
 
-const mqttClient = mqtt.connect('mqtt://192.168.22.5')
+const mqttClient = mqtt.connect(mqttServer)
 
 const socketWol = socketServer.of("/wol");
 const socketPortal = socketServer.of("/portal");
-
-const menus = {
-  menu: [
-    { icon: "mdi-view-dashboard", text: "Dashboard", href: "/" },
-    { icon: "mdi-lock", text: "Portal", href: "portal" },
-    { icon: "mdi-lan", text: "WOL", href: "wol" },
-  ],
-};
-
-const portals = {
-  portals: [
-    { id: "1", name: "HD", state: 1, tstamp: "1682600411"}
-  ],
-};
-
-// Define the hosts object
-const hosts = {
-  hosts: [
-    { name: "google.com", port: "80" },
-    {
-      name: "samstv.muh",
-      port: "22",
-      mac: "90:1B:0E:3E:F3:77",
-      ip: "192.168.22.20",
-    },
-  ],
-};
-
-const showTimestamp = true;
 
 app.use(express.static(path.join(path.resolve(), "/public")));
 
@@ -135,8 +109,10 @@ socketWol.on("connection", async (socket) => {
   });
 
   // hosts ping and send
-  for (let x in hosts) {
-    for (let y in hosts[x]) {
+  let x;
+  let y;
+  for (x in hosts) {
+    for (y in hosts[x]) {
       hosts[x][y].state = await isReachable(
         hosts[x][y].name + ":" + hosts[x][y].port
       );
@@ -152,27 +128,25 @@ socketWol.on("connection", async (socket) => {
 
   // hosts interval ping and send
   var interval = setAsyncInterval(async () => {
-    {
-      let x;
-      for (y in hosts[x]) {
-        if (hosts[x][y].hasOwnProperty("ip")) {
-          hosts[x][y].state = await isReachable(
-            hosts[x][y].ip + ":" + hosts[x][y].port
-          );
+    let x;
+    let y;
+    for (x in hosts){
+      for (y in hosts[x]){
+        if (hosts[x][y].hasOwnProperty('ip')){
+          hosts[x][y].state = await isReachable(hosts[x][y].ip + ':' + hosts[x][y].port)
         } else {
-          hosts[x][y].state = await isReachable(
-            hosts[x][y].name + ":" + hosts[x][y].port
-          );
+          hosts[x][y].state = await isReachable(hosts[x][y].name + ':' + hosts[x][y].port)
         }
       }
     }
     const promise = new Promise((resolve) => {
-      setTimeout(resolve("all done"), 3000);
-    });
-    await promise;
-    //console.log(getTime() + 'portal: Sending wol JSON interval ' + JSON.stringify(Object.assign({}, menu, hosts)))
-    socketWol.emit("wol", Object.assign({}, menus, hosts));
-  }, 3000);
+      setTimeout(resolve('all done'), 3000)
+    })
+    await promise
+    console.log(getTime() + 'portal: Sending wol JSON interval ' + JSON.stringify(Object.assign({}, menus, hosts)))
+    socketWol.emit('wol',(Object.assign({}, menus, hosts)))
+  }, 3000)
+
 });
 
 // new connection
