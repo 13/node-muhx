@@ -242,7 +242,7 @@
 											</v-row>
 											<v-row>
 												<v-col>
-													<v-btn block @click="notifyPortal(portals[idx].name, portals[idx].name_short, 'open', $event)">
+													<v-btn block @click="notifyPortal(portals[idx].name, portals[idx].name_short, 'O', $event)">
 														<v-icon left dark>mdi-door-open</v-icon>
 														Öffnen
 													</v-btn>
@@ -250,13 +250,13 @@
 											</v-row>
 											<v-row>
 												<v-col>
-													<v-btn block @click="notifyPortal(portals[idx].name, portals[idx].name_short, 'unlock', $event)">
+													<v-btn block @click="notifyPortal(portals[idx].name, portals[idx].name_short, 'U', $event)">
 														<v-icon left dark>mdi-lock-open-variant</v-icon>
 														Entriegeln
 													</v-btn>
 												</v-col>
 												<v-col>
-													<v-btn block @click="notifyPortal(portals[idx].name, portals[idx].name_short, 'lock', $event)">
+													<v-btn block @click="notifyPortal(portals[idx].name, portals[idx].name_short, 'L', $event)">
 														<v-icon left dark>mdi-lock</v-icon>
 														Verriegeln
 													</v-btn>
@@ -280,7 +280,7 @@
 											</v-row>
 											<v-row>
 												<v-col>
-													<v-btn block @click="notifyPortal(portals[idx].name, portals[idx].name_short, 'move', $event)">
+													<v-btn block @click="notifyPortal(portals[idx].name, portals[idx].name_short, 'T', $event)">
 														<v-icon left dark>mdi-arrow-up-down-bold</v-icon>
 														Bewegen
 													</v-btn>
@@ -386,16 +386,16 @@
 					case "garage":
 					txt = "Garage";
 					break;
-					case "move":
+					case "T":
 					txt = "Bewegen";
 					break;
-					case "open":
+					case "O":
 					txt = "Öffnen";
 					break;
-					case "lock":
+					case "L":
 					txt = "Verriegeln";
 					break;	
-					case "unlock":
+					case "U":
 					txt = "Entriegeln";
 					break;	
 					default:

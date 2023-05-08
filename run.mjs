@@ -29,22 +29,27 @@ function getTime() {
 }
 
 mqttClient.on('connect', function() {
-  mqttClient.subscribe('tasmota/sensors/#', function (err) {
+  mqttClient.subscribe('muh/portal/#', function (err) {
     console.log('Connected to sensors')
     //console.log(showTimestamp() + '' + scene.name + ': MQTT ' + light1.name + ' ' + light1.subscr + ' connected')
   })
 })
 
 mqttClient.on('message', function (topic, payload) {
-  console.log('Topic: ' + topic.toString())
-  console.log('Payload: ' + payload.toString())
+  //console.log('Topic: ' + topic.toString())
+  //console.log('Payload: ' + payload.toString())
   //console.log(JSON.parse(payload).N)
   let jsonObj = '';
   try {
     jsonObj = JSON.parse(payload);
-    console.log('Payload JSON: ' + JSON.parse(payload));
+    //console.log('Payload JSON: ' + jsonObj.toString());
   } catch (error) {
-    console.log('Payload not JSON');
+    //console.log('Payload not JSON');
+  }
+  if (portals.portals.find(p => p.name_short === topic.match(/muh\/portal\/(.+?)\/json/)?.[1].toLowerCase())){
+    //console.log(portals.portals.find(p => p.name_short === topic.match(/muh\/portal\/(.+?)\/json/)?.[1].toLowerCase()))
+    portals.portals.find(p => p.name_short === topic.match(/muh\/portal\/(.+?)\/json/)?.[1].toLowerCase()).state = jsonObj.state
+    portals.portals.find(p => p.name_short === topic.match(/muh\/portal\/(.+?)\/json/)?.[1].toLowerCase()).tstamp = jsonObj.time
   }
 })
 
@@ -64,6 +69,7 @@ socketPortal.on("connection", async (socket) => {
   // receive portal command
   socket.on("pushportal", (name, action) => {
     console.log(getTime() + "socketio: pushportal " + name + " " + action);
+    mqttClient.publish('muh/portal/RLY/cmnd', name + '_' + action);
   });
 
   // Send JSON
