@@ -4,6 +4,7 @@
   "description": "muh unified homeautomation",
   "main": "run.mjs",
   "scripts": {
+    "start": "node run.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

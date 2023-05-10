@@ -1,0 +1,19 @@
+services:
+  node-muhx:
+    build: .
+    container_name: muhx
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: Europe/Rome
+      VIRTUAL_HOST: portal.${DOMAIN}
+    ports:
+      - 3003:3003
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped
+
+networks:
+  mac0:
+    external: true
+    name: mac0

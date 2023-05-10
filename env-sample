@@ -1,0 +1,13 @@
+# ENV
+DOMAIN=nuc3.muh
+IP=192.168.22.99
+
+PUID=1000
+PGID=1000
+
+DATA=/home/ben/docker/z-data
+CONF=/home/ben/docker/z-config
+
+PASS_POSTGRES=
+PASS_GITEA=
+

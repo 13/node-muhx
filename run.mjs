@@ -111,6 +111,7 @@ socketWol.on("connection", async (socket) => {
     console.log(getTime() + "wol: waking " + mac);
     if (mac != null) {
       wakeOnLan.wake(mac);
+      mqttClient.publish('muh/wol', JSON.stringify({mac: mac}));
     }
   });
 
