@@ -139,7 +139,7 @@
 						
 						<!-- snackbar -->
 						<v-snackbar
-						v-model="sb_wol"
+						v-model="sb_hz"
 						:timeout="sb_timeout"
 						color="green lighten-1"
 						top
@@ -149,22 +149,22 @@
 						
 						<v-list>
 							<v-list-item
-							v-for="(host, idx) in hosts"
+							v-for="(radiator, idx) in radiators"
 							:key="idx"
-							@click="notify(host.mac, host.name, $event)"
-							v-bind:disabled="checkMAC(host.mac)"
+							@click="notify(radiator.mac, radiator.name, $event)"
+							v-bind:disabled="checkMAC(radiator.mac)"
 							style="color: #000 !important"
 							>
 								<v-list-item-content>
-									<v-list-item-title>{{ host.name | short }}</v-list-item-title>
+									<v-list-item-title>{{ radiator.name | short }}</v-list-item-title>
 								</v-list-item-content>
 								<v-btn
-								v-bind:color="stateToTag(host.state)"
+								v-bind:color="stateToTag(radiator.state)"
 								small
 								dark
 								elevation="0"
 								>
-									{{ host.state | onoff }}	
+									{{ radiator.state | onoff }}	
 								</v-btn>
 								<!--<v-list-item-icon>
 									<v-icon v-bind:color="stateToTag(host.state)">mdi-checkbox-blank</v-icon>
@@ -185,7 +185,7 @@
 		<script>
 			"use strict"
 			
-			var socket = io('/wol'); //load socket.io-client and connect to the host that serves the page
+			var socket = io('/hz'); //load socket.io-client and connect to the host that serves the page
 			
 			// Vue
 			var app = new Vue({
@@ -195,9 +195,9 @@
 					socketState: false,
 					isHidden: false,
 					json: null,
-					hosts: [],
+					radiators: [],
 					menu: [],
-					sb_wol: false,
+					sb_hz: false,
 					sb_text: null,
 					sb_timeout: 2000,
 					drawer: null,
@@ -222,9 +222,9 @@
 				},
 				methods: {
 					getRealtimeData() {
-						socket.on('wol', json => { //get button status from client
+						socket.on('hz', json => { //get button status from client
 							this.json = json
-							this.hosts = json.hosts
+							this.radiators = json.radiators
 							this.menu = json.menu
 							this.socketState = true
 							//console.log(JSON.stringify(this.json))
@@ -233,7 +233,7 @@
 						}),
 						socket.on('disconnect', socketState => {
 							this.socketState = false
-					    this.hosts = []
+					    this.radiators = []
 							console.log('socket disconnect: ' + socketState)
 						});
 					},
@@ -243,16 +243,16 @@
 					checkMAC(value){
 						return (!value ? true : false)
 					},
-					notify: function (mac, hostname, event) {
+					notify: function (mac, radiator, event) {
 						// now we have access to the native event
 						if (event) {
 							event.preventDefault()
 						}
 						if (typeof mac !== 'undefined'){ 
-							console.log("Waking " + hostname + " " + mac + " ...")
+							console.log("Waking " + radiator + " " + mac + " ...")
 							socket.emit("wakemac", mac); //send push button status to back to server
-							this.sb_text = "Waking " + hostname.substr(0, hostname.indexOf('.')) + " ..."
-							this.sb_wol = true
+							this.sb_text = "Waking " + radiator.substr(0, radiator.indexOf('.')) + " ..."
+							this.sb_hz = true
 						}
 					},
 				},

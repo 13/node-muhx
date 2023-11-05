@@ -8,7 +8,7 @@ import * as mqtt from 'mqtt'
 import isReachable from "is-reachable";
 import wakeOnLan from "wake_on_lan";
 
-import { serverPort, mqttServer, menus, portals, hosts } from './env.mjs'
+import { serverPort, mqttServer, menus, portals, hosts, radiators } from './env.mjs'
 
 const showTimestamp = true;
 
@@ -104,7 +104,7 @@ socketWol.on("connection", async (socket) => {
   socket.on("disconnect", () => {
     connectCounter--;
     console.log(getTime() + "socketio: users disconnected " + connectCounter);
-    clearAsyncInterval(interval);
+    clearAsyncInterval(interval_wol);
   });
 
   // receive mac and wol
@@ -135,7 +135,7 @@ socketWol.on("connection", async (socket) => {
   socketWol.emit("wol", Object.assign({}, menus, hosts));
 
   // hosts interval ping and send
-  var interval = setAsyncInterval(async () => {
+  var interval_wol = setAsyncInterval(async () => {
     let x;
     let y;
     for (x in hosts){
@@ -167,17 +167,42 @@ socketHz.on("connection", async (socket) => {
   socket.on("disconnect", () => {
     connectCounter--;
     console.log(getTime() + "socketio: users disconnected " + connectCounter);
-    clearAsyncInterval(interval);
+    clearAsyncInterval(interval_hz);
   });
 
   // receive mac and wol
-  socket.on("wakemac", (mac) => {
-    console.log(getTime() + "hz: waking " + mac);
+  socket.on("toggle", (mac) => {
+    console.log(getTime() + "wol: waking " + mac);
     if (mac != null) {
-      wakeOnLan.wake(mac);
+      //wakeOnLan.wake(mac);
       mqttClient.publish('muh/hz', JSON.stringify({mac: mac}));
     }
   });
+
+  console.log(
+    getTime() +
+      "portal: Sending hz JSON " +
+      JSON.stringify(Object.assign({}, menus, radiators))
+  );
+  socketWol.emit("hz", Object.assign({}, menus, radiators));
+
+  // interval
+  var interval_hz = setAsyncInterval(async () => {
+    let x;
+    let y;
+    for (x in radiators){
+      for (y in radiators[x]){
+        radiators[x][y].state = true
+      }
+    }
+    const promise = new Promise((resolve) => {
+      setTimeout(resolve('all done'), 3000)
+    })
+    await promise
+    console.log(getTime() + 'portal: Sending hz JSON interval ' + JSON.stringify(Object.assign({}, menus, radiators)))
+    socketWol.emit('hz',(Object.assign({}, menus, radiators)))
+  }, 3000)
+
 });
 
 // new connection
