@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+    <title>WOL</title>
+    <link rel="icon" href="favicon.png" type="image/png" sizes="16x16"> 
+    <!-- vuetify -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <!--
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    -->
+    <link href="/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="/css/vuetify.min.css" rel="stylesheet">
+    <!-- include socket.io client side script -->
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+<body>
+		<div id="app">
+			<v-app>
+				<v-navigation-drawer
+				v-model="drawer"
+				:clipped="$vuetify.breakpoint.lgAndUp"
+				app
+				>
+					<v-list dense>
+						<template v-for="item in menu">
+							<v-row
+							v-if="item.heading"
+							:key="item.heading"
+							align="center"
+							>
+								<v-col cols="6">
+									<v-subheader v-if="item.heading">
+										{{ item.heading }}
+									</v-subheader>
+								</v-col>
+								<v-col
+								cols="6"
+								class="text-center"
+								>
+									<a
+									href="#!"
+									class="body-2 black--text"
+									>EDIT</a>
+								</v-col>
+							</v-row>
+							<v-list-group
+							v-else-if="item.children"
+							:key="item.text"
+							v-model="item.model"
+							:prepend-icon="item.model ? item.icon : item['icon-alt']"
+							append-icon=""
+							>
+								<template v-slot:activator>
+									<v-list-item-content>
+										<v-list-item-title>
+											{{ item.text }}
+										</v-list-item-title>
+									</v-list-item-content>
+								</template>
+								<v-list-item
+								v-for="(child, i) in item.children"
+								:key="i"
+								:href="item.href"
+								link
+								>
+									<v-list-item-action v-if="child.icon">
+										<v-icon>{{ child.icon }}</v-icon>
+									</v-list-item-action>
+									<v-list-item-content>
+										<v-list-item-title>
+											{{ child.text }}
+										</v-list-item-title>
+									</v-list-item-content>
+								</v-list-item>
+							</v-list-group>
+							<v-list-item
+							v-else
+							:key="item.text"
+							link
+							:href="item.href"
+							>
+								<v-list-item-action>
+									<v-icon>{{ item.icon }}</v-icon>
+								</v-list-item-action>
+								<v-list-item-content>
+									<v-list-item-title>
+										{{ item.text }}
+									</v-list-item-title>
+								</v-list-item-content>
+							</v-list-item>
+						</template>
+					</v-list>
+				</v-navigation-drawer>			
+				<v-app-bar
+				:clipped-left="$vuetify.breakpoint.lgAndUp"
+				app
+				color="black"
+				dark
+				>
+					<v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>		
+					<v-toolbar-title
+					style="width: 300px"
+					class="ml-0 pl-4"
+					>
+						<span class="hidden-sm-and-down"></span>
+					</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-btn icon @click="">
+						<v-icon>mdi-refresh</v-icon>
+					</v-btn>
+				</v-app-bar>			
+				
+				<v-main>
+					
+					<!-- card -->
+					<v-card
+					class="mx-auto"
+					>
+						<!-- card header -->
+						<v-list-item>
+							<v-list-item-icon>
+								<v-icon>mdi-lan</v-icon>
+							</v-list-item-icon>	
+							<v-list-item-content>
+								<v-list-item-title class="headline">WOL</v-list-item-title>
+							</v-list-item-content>
+						</v-list-item>
+						
+						<!-- socket state -->
+						<v-progress-linear
+						class="mb-0"
+						value="100"
+						v-bind:color="stateToTag(socketState)"
+						></v-progress-linear>
+						
+						<!-- snackbar -->
+						<v-snackbar
+						v-model="sb_wol"
+						:timeout="sb_timeout"
+						color="green lighten-1"
+						top
+						>
+							{{ sb_text }}
+						</v-snackbar>	
+						
+						<v-list>
+							<v-list-item
+							v-for="(host, idx) in hosts"
+							:key="idx"
+							@click="notify(host.mac, host.name, $event)"
+							v-bind:disabled="checkMAC(host.mac)"
+							style="color: #000 !important"
+							>
+								<v-list-item-content>
+									<v-list-item-title>{{ host.name | short }}</v-list-item-title>
+								</v-list-item-content>
+								<v-btn
+								v-bind:color="stateToTag(host.state)"
+								small
+								dark
+								elevation="0"
+								>
+									{{ host.state | onoff }}	
+								</v-btn>
+								<!--<v-list-item-icon>
+									<v-icon v-bind:color="stateToTag(host.state)">mdi-checkbox-blank</v-icon>
+								</v-list-item-icon>-->
+							</v-list-item>		
+						</v-list>
+					</v-card>
+				</v-main>
+			</v-app>
+		</div><!-- app -->
+		
+	<!--
+	<script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+	-->
+	<script src="/js/vue.js"></script>
+	<script src="/js/vuetify.js"></script>
+		<script>
+			"use strict"
+			
+			var socket = io('/wol'); //load socket.io-client and connect to the host that serves the page
+			
+			// Vue
+			var app = new Vue({
+				el: '#app',
+				vuetify: new Vuetify(),
+				data: {
+					socketState: false,
+					isHidden: false,
+					json: null,
+					hosts: [],
+					menu: [],
+					sb_wol: false,
+					sb_text: null,
+					sb_timeout: 2000,
+					drawer: null,
+					/*items: [
+					{ icon: 'mdi-view-dashboard', text: 'Dashboard', href: '/' },
+					{ icon: 'mdi-lock', text: 'Portal', href: 'portal' },
+					{ icon: 'mdi-lan', text: 'WOL', href: 'wol' },
+					],*/
+				},
+				/*mounted: function () {
+					this.$nextTick(function () {
+					// ...
+					})
+				},*/
+				filters: {
+					onoff (value) {
+						return (value ? 'on' : 'off')
+					},
+					short (value) {
+						return value.substr(0, value.indexOf('.'))
+					}
+				},
+				methods: {
+					getRealtimeData() {
+						socket.on('wol', json => { //get button status from client
+							this.json = json
+							this.hosts = json.hosts
+							this.menu = json.menu
+							this.socketState = true
+							//console.log(JSON.stringify(this.json))
+							//console.log(JSON.stringify(this.hosts))
+							console.log("socket connect: " + this.socketState)
+						}),
+						socket.on('disconnect', socketState => {
+							this.socketState = false
+					    this.hosts = []
+							console.log('socket disconnect: ' + socketState)
+						});
+					},
+					stateToTag(value){
+						return (value ? 'green' : 'red')
+					},
+					checkMAC(value){
+						return (!value ? true : false)
+					},
+					notify: function (mac, hostname, event) {
+						// now we have access to the native event
+						if (event) {
+							event.preventDefault()
+						}
+						if (typeof mac !== 'undefined'){ 
+							console.log("Waking " + hostname + " " + mac + " ...")
+							socket.emit("wakemac", mac); //send push button status to back to server
+							this.sb_text = "Waking " + hostname.substr(0, hostname.indexOf('.')) + " ..."
+							this.sb_wol = true
+						}
+					},
+				},
+				created () {
+					this.getRealtimeData()
+				},
+				//computed: {
+				//}
+			})
+		</script>
+	</body>
+</html>
