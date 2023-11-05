@@ -20,6 +20,7 @@ var connectCounter = 0;
 const mqttClient = mqtt.connect(mqttServer)
 
 const socketWol = socketServer.of("/wol");
+const socketHz = socketServer.of("/hz");
 const socketPortal = socketServer.of("/portal");
 
 app.use(express.static(path.join(path.resolve(), "/public")));
@@ -156,6 +157,29 @@ socketWol.on("connection", async (socket) => {
 
 });
 
+// hz
+socketHz.on("connection", async (socket) => {
+  console.log(getTime() + "socketio: hz connected");
+  connectCounter++;
+  console.log(getTime() + "socketio: users connected " + connectCounter);
+
+  // disconnect user
+  socket.on("disconnect", () => {
+    connectCounter--;
+    console.log(getTime() + "socketio: users disconnected " + connectCounter);
+    clearAsyncInterval(interval);
+  });
+
+  // receive mac and wol
+  socket.on("wakemac", (mac) => {
+    console.log(getTime() + "hz: waking " + mac);
+    if (mac != null) {
+      wakeOnLan.wake(mac);
+      mqttClient.publish('muh/hz', JSON.stringify({mac: mac}));
+    }
+  });
+});
+
 // new connection
 socketServer.on("connection", async (socket) => {
   var socketId = socket.id;
@@ -173,6 +197,10 @@ app.get("/portal", (req, res) => {
 
 app.get("/wol", (req, res) => {
   res.sendFile(path.join(path.resolve(), "/public/wol.html"));
+});
+
+app.get("/hz", (req, res) => {
+  res.sendFile(path.join(path.resolve(), "/public/hz.html"));
 });
 
 webServer.listen(serverPort, function () {
