@@ -8,7 +8,7 @@ import * as mqtt from 'mqtt'
 import isReachable from "is-reachable";
 import wakeOnLan from "wake_on_lan";
 
-import { serverPort, mqttServer, menus, portals, hosts, radiators } from './env.mjs'
+import { serverPort, wsPort, mqttServer, menus, portals, hosts, radiators } from './env.mjs'
 
 const showTimestamp = true;
 
@@ -21,6 +21,7 @@ const mqttClient = mqtt.connect(mqttServer)
 
 const socketWol = socketServer.of("/wol");
 const socketHz = socketServer.of("/hz");
+const socketHz2 = socketServer.of("/hz2");
 const socketPortal = socketServer.of("/portal");
 
 app.use(express.static(path.join(path.resolve(), "/public")));
@@ -31,7 +32,7 @@ function getTime() {
 
 mqttClient.on('connect', function() {
   mqttClient.subscribe('muh/portal/#', function (err) {
-    console.log('Connected to sensors')
+    console.log(getTime() + "mqtt: connected");
     //console.log(showTimestamp() + '' + scene.name + ': MQTT ' + light1.name + ' ' + light1.subscr + ' connected')
   })
 })
@@ -78,7 +79,7 @@ socketPortal.on("connection", async (socket) => {
   //portal.emit('portal',(Object.assign({}, menu, portals)))
   console.log(
     getTime() +
-      "portal: Sending portal JSON " +
+      "portal: Sending portal JSON @ " + wsPort + " " + 
       JSON.stringify(Object.assign({}, portals))
   );
   socketPortal.emit("portal", Object.assign({}, menus, portals));
@@ -86,12 +87,12 @@ socketPortal.on("connection", async (socket) => {
   // hosts interval ping and send
   var interval_p = setAsyncInterval(async () => {
     const promise = new Promise((resolve) => {
-      setTimeout(resolve("all done"), 3000);
+      setTimeout(resolve("all done"), wsPort);
     });
     await promise;
     //console.log(getTime() + 'portal: Sending portal JSON interval ' + JSON.stringify(Object.assign({}, menu, portals)))
     socketPortal.emit("portal", Object.assign({}, menus, portals));
-  }, 3000);
+  }, wsPort);
 });
 
 // wol
@@ -148,12 +149,12 @@ socketWol.on("connection", async (socket) => {
       }
     }
     const promise = new Promise((resolve) => {
-      setTimeout(resolve('all done'), 3000)
+      setTimeout(resolve('all done'), wsPort)
     })
     await promise
     console.log(getTime() + 'portal: Sending wol JSON interval ' + JSON.stringify(Object.assign({}, menus, hosts)))
     socketWol.emit('wol',(Object.assign({}, menus, hosts)))
-  }, 3000)
+  }, wsPort)
 
 });
 
@@ -196,12 +197,12 @@ socketHz.on("connection", async (socket) => {
       }
     }
     const promise = new Promise((resolve) => {
-      setTimeout(resolve('all done'), 3000)
+      setTimeout(resolve('all done'), wsPort)
     })
     await promise
-    console.log(getTime() + 'portal: Sending hz JSON interval ' + JSON.stringify(Object.assign({}, menus, radiators)))
+    console.log(getTime() + 'portal: Sending hz JSON interval @ port ' + wsPort + ' ' + JSON.stringify(Object.assign({}, menus, radiators)))
     socketWol.emit('hz',(Object.assign({}, menus, radiators)))
-  }, 3000)
+  }, wsPort)
 
 });
 
@@ -226,6 +227,10 @@ app.get("/wol", (req, res) => {
 
 app.get("/hz", (req, res) => {
   res.sendFile(path.join(path.resolve(), "/public/hz.html"));
+});
+
+app.get("/hz2", (req, res) => {
+  res.sendFile(path.join(path.resolve(), "/public/wol2.html"));
 });
 
 webServer.listen(serverPort, function () {
