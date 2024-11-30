@@ -2,7 +2,7 @@
 
 **m**uh **u**nified **h**omeautomation **x**tended
 
-A Homeautomation Frontend & Backend built with Vue.js
+A Homeautomation Frontend built with Vue.js
 
 <p align="center">
 <img src="assets/screen1.png" width="300">
